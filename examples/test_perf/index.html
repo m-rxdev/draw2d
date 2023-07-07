@@ -1,0 +1,52 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<title></title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <link type="text/css" rel="stylesheet" href="./css/style.css" />
+
+    <script src="./lib/jquery.js"></script>
+    <script src="./lib/jquery-ui.js"></script>
+
+    <script src="../../dist/draw2d.js"></script>
+
+<script type="text/javascript">
+
+document.addEventListener("DOMContentLoaded",function () {        
+    var canvas = new draw2d.Canvas("gfx_holder");
+    canvas.initialWidth = 10000;
+    canvas.initialHeight = 10000;
+    
+    canvas.installEditPolicy(new draw2d.policy.canvas.ShowGridEditPolicy());
+    canvas.installEditPolicy(new draw2d.policy.canvas.SnapToCenterEditPolicy());
+    canvas.installEditPolicy(new draw2d.policy.canvas.SnapToGeometryEditPolicy());
+    canvas.installEditPolicy(new draw2d.policy.canvas.SnapToInBetweenEditPolicy());
+    canvas.installEditPolicy(new draw2d.policy.canvas.SnapToVerticesEditPolicy());
+    // canvas.installEditPolicy(new draw2d.policy.figure.GlowSelectionFeedbackPolicy());
+    // canvas.installEditPolicy(new draw2d.policy.figure.VertexSelectionFeedbackPolicy());
+    // canvas.installEditPolicy(new draw2d.policy.figure.RectangleSelectionFeedbackPolicy());
+    // canvas.installEditPolicy(new draw2d.policy.figure.AntSelectionFeedbackPolicy());
+    
+    fetch('./data/data.json')
+        .then((response) => response.json())
+        .then((json) => {
+            console.log("unmarshal");
+            var startTime = performance.now();
+            const reader = new draw2d.io.json.Reader();
+            reader.unmarshal(canvas, json);
+            var endTime = performance.now();
+            console.log(`unmarshal done in ${endTime - startTime} milliseconds`)            
+        });
+});
+</script>
+
+</head>
+
+<body>
+<div  onselectstart="javascript:/*IE8 hack*/return false" id="gfx_holder" style="width:2500px; height:2500px; ">
+</div>
+
+</body>
+</html>

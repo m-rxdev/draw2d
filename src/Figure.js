@@ -161,6 +161,7 @@ draw2d.Figure = Class.extend(
       this.ox = 0
       this.oy = 0
       this.repaintBlocked = false
+      this.eventBlocked = false
       this.lastAppliedAttributes = {}
       this.selectionHandles = new draw2d.util.ArrayList()
       this.panningDelegate = null
@@ -2411,6 +2412,8 @@ draw2d.Figure = Class.extend(
      * @since 5.0.0
      */
     fireEvent: function (event, args) {
+      if (this.eventBlocked) return;
+      
       try {
         if (typeof this.eventSubscriptions[event] === 'undefined') {
           return

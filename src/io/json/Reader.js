@@ -43,6 +43,7 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
   /** @lends draw2d.io.json.Reader.prototype */
   {
     NAME: "draw2d.io.json.Reader",
+    figureConstructors: new Map(),
 
     init: function () {
       this._super();
@@ -57,16 +58,27 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
      * @param {Object|String} json the json object to load.
      */
     unmarshal: function (canvas, json) {
-      let result = new draw2d.util.ArrayList();
+      let result = new draw2d.util.ArrayList();      
+      let startTime = performance.now();
+      let endTime = performance.now();
+      let createtime = 0;
+      let addtime = 0;
+      let looptime = 0;
 
       if (typeof json === "string") {
         json = JSON.parse(json);
       }
 
+      startTime = performance.now();
       let node = null;
       json.forEach((element) => {
         try {
+          let cs = performance.now();
           let o = this.createFigureFromElement(element) || this.createFigureFromType(element.type);
+          o.repaintBlocked = true;
+          // o.eventBlocked = true;
+          let ce = performance.now();
+          createtime += ce - cs;
           let source = null;
           let target = null;
           for (let i in element) {
@@ -98,8 +110,15 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
             o.setSource(source)
             o.setTarget(target)
           }
+          let ls = performance.now();
           o.setPersistentAttributes(element)
-          canvas.add(o)
+          let le = performance.now();
+          looptime += le - ls
+
+          let as = performance.now();
+          canvas.add(o)          
+          let ae = performance.now();
+          addtime += ae - as;
           result.add(o)
         } catch (exc) {
           debug.error(element, "Unable to instantiate figure type '" + element.type + "' with id '" + element.id + "' during unmarshal by " + this.NAME + ". Skipping figure..");
@@ -107,9 +126,32 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
           debug.warn(element)
         }
       });
+      endTime = performance.now();
+      console.log(`DRAW2D - figures generated in ${endTime - startTime} milliseconds`);
+      console.log(`DRAW2D - create figures in ${createtime} milliseconds`);
+      console.log(`DRAW2D - loop figures in ${looptime} milliseconds`);
+      console.log(`DRAW2D - add figures in ${addtime} milliseconds`);
+
+      startTime = performance.now();
+      result.data.forEach(figure => {
+        figure.repaintBlocked = false;
+        figure.eventBlocked = false;
+        figure.repaint();
+      });
+      endTime = performance.now();
+      console.log(`DRAW2D - repaint figures in ${endTime - startTime} milliseconds`);
+      /*
+      canvas.calculateConnectionIntersection();
+      canvas.linesToRepaintAfterDragDrop.each((i, line) => {
+        line.svgPathString = null
+        line.repaint()
+      })
+      canvas.linesToRepaintAfterDragDrop = new draw2d.util.ArrayList();*/
+
 
       // restore group assignment
       //
+      startTime = performance.now();
       json.forEach(element => {
         if (typeof element.composite !== "undefined") {
           let figure = canvas.getFigure(element.id);
@@ -120,15 +162,20 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
           group.assignFigure(figure);
         }
       });
+      endTime = performance.now();
+      console.log(`DRAW2D - restore group assignment in ${endTime - startTime} milliseconds`);
 
       // recalculate all crossings and repaint the connections with
       // possible crossing decoration
+      startTime = performance.now();
       canvas.calculateConnectionIntersection();
       canvas.getLines().each((i, line) => {
         line.svgPathString = null;
         line.repaint();
       });
       canvas.linesToRepaintAfterDragDrop = canvas.getLines().clone();
+      endTime = performance.now();
+      console.log(`DRAW2D - calculateConnectionIntersection in ${endTime - startTime} milliseconds`);
 
       canvas.showDecoration();
 
@@ -143,7 +190,9 @@ draw2d.io.json.Reader = draw2d.io.Reader.extend(
      * @returns {draw2d.Figure}
      */
     createFigureFromType: function (type) {
-      return Function(`return new ${type}()`)()
+      if(!this.figureConstructors.has(type))
+        this.figureConstructors.set(type, Function(`return new ${type}()`));      
+      return this.figureConstructors.get(type)();
     },
 
     /**
